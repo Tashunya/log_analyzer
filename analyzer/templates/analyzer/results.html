@@ -1,0 +1,16 @@
+{% extends 'analyzer/base.html' %}
+
+    {% block content %}
+    <a href="{% url 'upload_file' %}">Upload new file</a>
+        <h1>Results</h1>
+        <form method="POST" class="post-form"  enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ choice_form.as_p }}
+            <button type="submit" class="btn btn-outline-success">
+                Choose
+            </button>
+        </form>
+        <div style="width:1000;height:500">
+        {{ graph_div|safe }}
+        </div>
+    {% endblock %}
