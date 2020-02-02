@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .forms import UploadFileForm, ChoiceForm
 
-from .analyze import parse_uploaded_file
+from .analyze import parse_uploaded_file, create_graph
 
 
 def index(request):
@@ -22,8 +22,6 @@ def upload_file(request):
 
 def show_results(request):
     import pandas as pd
-    from plotly import offline
-    import plotly.graph_objs as go
 
     choice_form = ChoiceForm()
     list_of_dicts = request.session.get('list_of_dicts', '')
@@ -32,42 +30,15 @@ def show_results(request):
     if request.method == "POST":
         choice_form = ChoiceForm(request.POST)
         if choice_form.is_valid():
-            if request.POST['field'] == '2':
-                df2 = df[['time', 'clientID']].groupby(['time']).count().sort_index()
-                time_ax = list(df2.index)
-                process_count = list(df2['clientID'])
-                fig = go.Figure(layout={'title': 'Number of processes vs Time'})
-                bar = go.Bar(x=time_ax, y=process_count,
-                             name='Number of processes vs Time')
-                fig.add_trace(bar)
-                graph_div = offline.plot(fig, auto_open=False, output_type='div')
+            choice_num = request.POST['field']
+            graph_div = create_graph(df, choice_num)
 
-                return render(request, 'analyzer/results.html', {'graph_div': graph_div,
-                                                                 'choice_form': choice_form})
+            return render(request, 'analyzer/results.html', {'graph_div': graph_div,
+                                                             'choice_form': choice_form})
 
-            else:
-                df1 = df[['Usr', 'clientID']].groupby(['Usr']).count().sort_values(by=['clientID'])
-                users = list(df1.index)
-                process_count = list(df1['clientID'])
-
-                fig = go.Figure(layout={'title': 'Number of processes vs User'})
-                bar = go.Bar(x=users, y=process_count,
-                             name='Number of processes vs User')
-                fig.add_trace(bar)
-                graph_div = offline.plot(fig, auto_open=False, output_type="div")
-
-                return render(request, 'analyzer/results.html', {'graph_div': graph_div,
-                                                                 'choice_form': choice_form})
-
-
-    df1 = df[['Usr', 'clientID']].groupby(['Usr']).count().sort_values(by=['clientID'])
-    users = list(df1.index)
-    process_count = list(df1['clientID'])
-    fig = go.Figure(layout={'title': 'Number of processes vs User'})
-    bar = go.Bar(x=users, y=process_count,
-                 name='Number of processes vs User')
-    fig.add_trace(bar)
-    graph_div = offline.plot(fig, auto_open=False, output_type="div")
+    graph_div = create_graph(df, '1')
 
     return render(request, 'analyzer/results.html', {'graph_div': graph_div,
                                                      'choice_form': choice_form})
+
+
