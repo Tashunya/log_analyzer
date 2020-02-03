@@ -45,6 +45,9 @@ def parse_uploaded_file(filename):
                 new_context = ""
                 for item in record[idx_start:]:
                     new_context += item
+                    if len(new_context) >= 80:
+                        new_context = new_context[:81]
+                        break
 
                 del record[idx_start:]
                 record.append(new_context)
@@ -60,6 +63,9 @@ def parse_uploaded_file(filename):
         new_sql = ""
         for item in record[idx_start:idx_fin]:
             new_sql += item
+            if len(new_sql) >= 100:
+                new_sql = new_sql[:101]
+                break
 
         del record[idx_start:idx_fin]
         record.insert(idx_start, new_sql)
@@ -76,6 +82,7 @@ def parse_uploaded_file(filename):
         new_plan_sql = ""
         for item in record[idx_start:idx_fin]:
             new_plan_sql += item
+        #  new_plan_sql = new_plan_sql[:101] if len(new_plan_sql) > 100 else new_plan_sql
 
         del record[idx_start:idx_fin]
         record.insert(idx_start, new_plan_sql)
@@ -145,24 +152,28 @@ def create_graph(df, choice_num):
 
     else:
         df1 = df1.sort_values(by=['count'])  # сортировка по кол-ву процессов
+        # если групп больше 10
         # объединить 5% значений в группу "Другие"
-        total_sum = df1['count'].sum()
-        percentile_5 = int(total_sum * 0.05)  # 5% от общего числа процессов
-        df1['cumsum'] = df1['count'].cumsum()  # столбец с накоплением суммы процессов
-        limit = df1.iloc[
-            (df1['cumsum'] - percentile_5).abs().argsort()[:1]]  # строка, ближайшая к 5%
-        limit_num = int(limit['cumsum'])  # кол-во процессов
-        df1 = df1[df1['cumsum'] > limit_num]  # убрать лишние строки с низкими значениями
-        df1.loc["Другие"] = {'count': limit_num, 'cumsum': limit_num}  # добавить строку "Другие"
-        df1 = df1.sort_values(by=['count'])  # сортировка по кол-ву процессов
+        if len(df1) > 10:
+            df1['cumsum'] = df1['count'].cumsum()  # столбец с накоплением суммы процессов
+            total_sum = df1['count'].sum()
+            percentile_5 = int(total_sum * 0.05)  # 5% от общего числа процессов
+            limit = df1.iloc[
+                (df1['cumsum'] - percentile_5).abs().argsort()[:1]]  # строка, ближайшая к 5%
+            limit_num = int(limit['cumsum'])  # кол-во процессов
+            df1 = df1[df1['cumsum'] > limit_num]  # убрать лишние строки с низкими значениями
+            df1.loc["Другие"] = {'count': limit_num, 'cumsum': limit_num}  # добавить строку "Другие"
+            df1 = df1.sort_values(by=['count'])  # сортировка по кол-ву процессов
 
-        users = list(df1.index)
+        x_axis = list(df1.index)
         process_count = list(df1['count'])
 
         fig = go.Figure(layout={'title': f'Number of Processes vs {choice}'})
-        bar = go.Bar(x=users, y=process_count,
+        bar = go.Bar(x=x_axis, y=process_count, text=process_count,
                      name=f'Number of Processes vs {choice}')
         fig.add_trace(bar)
+        fig.update_layout(xaxis={'type': 'category'})
+        fig.update_traces(texttemplate='%{text:.3s}', textposition='outside')
         graph_div = offline.plot(fig, auto_open=False, output_type="div")
 
     return graph_div
